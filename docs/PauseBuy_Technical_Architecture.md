@@ -87,7 +87,7 @@ flowchart TB
             Validator --> KeyVault
         end
         
-        OpenAI["🤖 OpenAI API<br/>GPT-5 Mini<br/>Key Never Exposed"]
+        OpenAI["🤖 OpenAI API<br/>GPT-4o-mini<br/>Key Never Exposed"]
         Opik["📈 Comet Opik<br/>LLM Tracing | Evaluations"]
         
         KeyVault --> OpenAI
@@ -402,7 +402,7 @@ flowchart TB
     end
     
     subgraph External["☁️ External APIs"]
-        OpenAI["🤖 GPT-5 Mini"]
+        OpenAI["🤖 GPT-4o-mini"]
         Opik["📈 Comet Opik"]
     end
     
@@ -480,7 +480,7 @@ export default async function handler(req: Request) {
     const startTime = Date.now();
     
     const response = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
+      model: 'gpt-4o-mini',
       max_tokens: 300,
       temperature: 0.7,
       messages: [{
@@ -494,7 +494,7 @@ export default async function handler(req: Request) {
     // 5. Log to Opik
     opik.logLLMCall({
       traceId: trace.id,
-      model: 'gpt-5-mini',
+      model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: buildPrompt(request) }],
       completion: response.content[0].text,
       usage: {
@@ -813,7 +813,7 @@ flowchart TB
         end
         
         subgraph Span4["SPAN: llm_call ⭐"]
-            S4Info["model: gpt-5-mini<br/>input_tokens: 450<br/>output_tokens: 120<br/>duration: 800ms"]
+            S4Info["model: gpt-4o-mini<br/>input_tokens: 450<br/>output_tokens: 120<br/>duration: 800ms"]
         end
         
         subgraph Span5["SPAN: user_interaction"]
@@ -874,14 +874,14 @@ export async function traceIntervention(
       const startTime = Date.now();
       
       const response = await openai.chat.completions.create({
-        model: 'gpt-5-mini',
+        model: 'gpt-4o-mini',
         max_tokens: 300,
         messages: [{ role: 'user', content: buildPrompt(context) }]
       });
       
       // Log LLM-specific data
       span.logLLMCall({
-        model: 'gpt-5-mini',
+        model: 'gpt-4o-mini',
         inputTokens: response.usage.input_tokens,
         outputTokens: response.usage.output_tokens,
         latencyMs: Date.now() - startTime
@@ -1137,7 +1137,7 @@ ALLOWED_ORIGINS=chrome-extension://*  # CORS origins
 |---------|-----------|------------------------|
 | **Vercel Edge Functions** | 100K invocations/month | ~$20/month |
 | **Vercel KV** | 256MB storage | ~$5/month |
-| **OpenAI API (GPT-5 Mini)** | N/A | ~$100/month (5 req/user/day) |
+| **OpenAI API (GPT-4o-mini)** | N/A | ~$100/month (5 req/user/day) |
 | **Comet Opik** | Free tier available | ~$0 (free tier sufficient) |
 
 **Total estimated cost at 10K users: ~$175/month**

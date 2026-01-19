@@ -22,12 +22,10 @@ function getOpenAIClient(): OpenAI {
   return openaiClient;
 }
 
-const MODEL = "gpt-5-mini";
-// GPT-5-mini is a reasoning model that uses internal thinking tokens
-// Reasoning can use 500-1500 tokens, plus we need ~200 for output
-const MAX_COMPLETION_TOKENS = 2000;
-// Note: GPT-5 Mini only supports temperature=1 (default)
-const TIMEOUT_MS = 30000; // Reasoning models take longer
+const MODEL = "gpt-4o-mini";
+const MAX_TOKENS = 300;
+const TEMPERATURE = 0.7;
+const TIMEOUT_MS = 10000;
 
 export interface LLMResponse {
   questions: string[];
@@ -132,7 +130,8 @@ export async function generateReflectionQuestions(
     const completion = await getOpenAIClient().chat.completions.create(
       {
         model: MODEL,
-        max_completion_tokens: MAX_COMPLETION_TOKENS,
+        max_tokens: MAX_TOKENS,
+        temperature: TEMPERATURE,
         messages: [
           {
             role: "user",

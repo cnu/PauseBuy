@@ -22,7 +22,7 @@
 | Target Platform | Chrome Extension (Manifest V3) |
 | Hackathon Category | Financial Health ($5,000) |
 | Timeline | 3 weeks (January 13 - February 3, 2025) |
-| Tech Stack | TypeScript, React, Tailwind CSS, OpenAI GPT-5 Mini, Comet Opik |
+| Tech Stack | TypeScript, React, Tailwind CSS, OpenAI GPT-4o-mini, Comet Opik |
 
 ---
 
@@ -187,7 +187,7 @@ PauseBuy follows a client-heavy architecture with minimal backend requirements, 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | Browser Extension | TypeScript, React, Tailwind CSS | UI, detection logic, local storage |
-| AI Service | OpenAI GPT-5 Mini | Generate reflective questions |
+| AI Service | OpenAI GPT-4o-mini | Generate reflective questions |
 | Observability | Comet Opik | LLM tracing, evaluation, optimization |
 | Data Storage | Chrome Storage API (local) | User preferences, history, goals |
 | Analytics Backend | Vercel Edge Functions | Anonymous aggregated analytics |
@@ -205,7 +205,7 @@ PauseBuy follows a client-heavy architecture with minimal backend requirements, 
 
 ### 6.3 AI Integration Details
 
-**LLM Selection:** OpenAI GPT-5 Mini (`gpt-5-mini`)
+**LLM Selection:** OpenAI GPT-4o-mini (`gpt-4o-mini`)
 
 **Rationale:**
 - Fast response time (<1 second) for seamless UX
@@ -399,7 +399,7 @@ interface Achievement {
 | Week | Focus Area | Deliverables |
 |------|------------|--------------|
 | **Week 1** | Foundation & Detection | Extension scaffold, purchase detection for Amazon/Shopify, basic UI overlay, Opik setup |
-| **Week 2** | AI & Core Features | OpenAI GPT-5 Mini integration, prompt engineering, cooling-off list, goal tracking, popup UI |
+| **Week 2** | AI & Core Features | OpenAI GPT-4o-mini integration, prompt engineering, cooling-off list, goal tracking, popup UI |
 | **Week 3** | Polish & Evaluation | Dashboard, Opik evaluations, A/B tests, bug fixes, documentation, demo video |
 
 ### 10.3 Detailed Week 1 Tasks
@@ -465,7 +465,7 @@ Day 5-7: Basic UI
 |------|------------|--------|------------|
 | User annoyance leading to uninstall | High | High | Adjustable friction levels, easy bypass for genuine needs, learn user patterns |
 | E-commerce sites block extension | Medium | Medium | Graceful degradation, generic detection methods, no site modification |
-| API costs exceed budget | Medium | Medium | Use GPT-5 Mini model, cache common questions, implement usage limits |
+| API costs exceed budget | Medium | Medium | Use GPT-4o-mini model, cache common questions, implement usage limits |
 | Detection fails on new sites | High | Low | Generic heuristics + user-reported site requests |
 | Privacy concerns | Low | High | All data local, no purchase data sent to servers, transparent policy |
 | LLM generates inappropriate questions | Low | Medium | Content filtering, user feedback loop, prompt guardrails |
@@ -557,7 +557,7 @@ Format as a JSON array of strings.
 | Average User | 5 | ~500 | $0.005 | $0.15 |
 | Heavy User | 15 | ~500 | $0.015 | $0.45 |
 
-*Based on OpenAI GPT-5 Mini pricing - significantly lower than alternatives*
+*Based on OpenAI GPT-4o-mini pricing - significantly lower than alternatives*
 
 ### 13.6 Privacy Policy Summary
 
