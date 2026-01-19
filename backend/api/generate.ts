@@ -12,6 +12,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+import { generateWithRetry } from "../lib/claude";
 import { validateRequest, type ReflectionRequest } from "../lib/validate";
 
 // CORS headers for Chrome extension
@@ -73,6 +74,19 @@ function determineRiskLevel(
   return "low";
 }
 
+function calculateGoalImpact(request: ReflectionRequest) {
+  if (!request.context.goalName) return null;
+
+  // Simplified calculation - real implementation would use actual goal data
+  const delayDays = Math.ceil(request.product.price / 50); // ~$50/day savings rate
+
+  return {
+    goalName: request.context.goalName,
+    delayDays,
+    message: `This purchase delays your "${request.context.goalName}" goal by ${delayDays} day${delayDays > 1 ? "s" : ""}.`,
+  };
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -107,51 +121,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Get client ID for rate limiting (future: pb-ydt)
   const clientId = (req.headers["x-client-id"] as string) || "anonymous";
 
+  // Calculate common response fields
+  const riskLevel = determineRiskLevel(request);
+  const goalImpact = calculateGoalImpact(request);
+
   try {
-    // TODO: pb-ydt - Check rate limit
-    // TODO: pb-8m6 - Call Claude API
+    // TODO: pb-ydt - Check rate limit before calling API
     // TODO: pb-oe1 - Log to Opik
 
-    // For now, return intelligent fallback response
-    const riskLevel = determineRiskLevel(request);
-    const questionCount = request.context.frictionLevel >= 4 ? 3 : 2;
-    const questions = getRandomFallbackQuestions(questionCount);
-
-    // Calculate goal impact if goal is set
-    let goalImpact = null;
-    if (request.context.goalName) {
-      // Simplified calculation - real implementation would use actual goal data
-      const delayDays = Math.ceil(request.product.price / 50); // ~$50/day savings rate
-      goalImpact = {
-        goalName: request.context.goalName,
-        delayDays,
-        message: `This purchase delays your "${request.context.goalName}" goal by ${delayDays} day${delayDays > 1 ? "s" : ""}.`,
-      };
+    // Check if API key is configured
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.warn("[PauseBuy API] ANTHROPIC_API_KEY not set, using fallbacks");
+      return res.status(200).json({
+        questions: getRandomFallbackQuestions(
+          request.context.frictionLevel >= 4 ? 3 : 2,
+        ),
+        goalImpact,
+        riskLevel,
+        meta: {
+          clientId,
+          timestamp: new Date().toISOString(),
+          source: "fallback",
+          reason: "api_key_not_configured",
+        },
+      });
     }
 
+    // Call Claude API with retry
+    const claudeResponse = await generateWithRetry(request, 1);
+
     return res.status(200).json({
-      questions,
+      questions: claudeResponse.questions,
       goalImpact,
       riskLevel,
       meta: {
         clientId,
         timestamp: new Date().toISOString(),
-        source: "fallback", // Will be "claude" when API is integrated
+        source: "claude",
       },
     });
   } catch (error) {
     console.error("[PauseBuy API] Error:", error);
 
     // Return fallback on any error
+    const questionCount = request.context.frictionLevel >= 4 ? 3 : 2;
+
     return res.status(200).json({
-      questions: getRandomFallbackQuestions(2),
-      goalImpact: null,
-      riskLevel: "medium",
+      questions: getRandomFallbackQuestions(questionCount),
+      goalImpact,
+      riskLevel,
       meta: {
         clientId,
         timestamp: new Date().toISOString(),
         source: "fallback",
-        error: true,
+        error: error instanceof Error ? error.message : "Unknown error",
       },
     });
   }
