@@ -39,10 +39,18 @@ PauseBuy/
 
 ## Build Commands
 
+### From Root (pnpm workspace)
+```bash
+pnpm install          # Install all workspace dependencies
+pnpm build            # Build extension
+pnpm build:all        # Build all packages
+pnpm test             # Run all tests
+pnpm lint             # Lint all packages
+```
+
 ### Extension
 ```bash
 cd extension
-pnpm install          # Install dependencies
 pnpm dev              # Development mode with hot reload
 pnpm build            # Production build → extension/build/chrome-mv3-prod/
 pnpm test             # Run tests (Vitest)
@@ -52,7 +60,6 @@ pnpm lint             # Lint code
 ### Backend
 ```bash
 cd backend
-pnpm install          # Install dependencies
 pnpm dev              # Local dev server (Vercel CLI)
 pnpm deploy           # Deploy to Vercel
 ```
