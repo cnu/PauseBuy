@@ -33,18 +33,51 @@ export interface LLMResponse {
 }
 
 /**
+ * Get time of day category from ISO datetime
+ */
+export function getTimeOfDay(
+  isoDateTime: string,
+): "morning" | "afternoon" | "evening" | "night" | "late_night" {
+  const date = new Date(isoDateTime);
+  const hour = date.getHours();
+  if (hour >= 5 && hour < 12) return "morning";
+  if (hour >= 12 && hour < 17) return "afternoon";
+  if (hour >= 17 && hour < 21) return "evening";
+  if (hour >= 21 && hour < 23) return "night";
+  return "late_night";
+}
+
+/**
+ * Format datetime for prompt
+ */
+function formatTimeContext(isoDateTime: string): string {
+  const date = new Date(isoDateTime);
+  const timeOfDay = getTimeOfDay(isoDateTime);
+  const hour = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, "0");
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const hour12 = hour % 12 || 12;
+
+  const timeStr = `${hour12}:${minutes} ${ampm}`;
+
+  const contexts: Record<string, string> = {
+    morning: `It's ${timeStr} in the morning`,
+    afternoon: `It's ${timeStr} in the afternoon`,
+    evening: `It's ${timeStr} in the evening`,
+    night: `It's ${timeStr} at night`,
+    late_night: `It's ${timeStr}, late at night`,
+  };
+
+  return contexts[timeOfDay];
+}
+
+/**
  * Build the prompt based on user context
  */
 function buildPrompt(request: ReflectionRequest): string {
   const { product, context } = request;
 
-  const timeContext = {
-    morning: "It's morning",
-    afternoon: "It's the afternoon",
-    evening: "It's evening",
-    night: "It's nighttime",
-    late_night: "It's late at night (after 11 PM)",
-  }[context.timeOfDay];
+  const timeContext = formatTimeContext(context.localDateTime);
 
   const goalContext = context.goalName
     ? `The user has a financial goal called "${context.goalName}".`

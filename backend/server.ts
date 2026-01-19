@@ -6,7 +6,7 @@
  */
 
 import { createServer, IncomingMessage, ServerResponse } from "http";
-import { generateWithRetry } from "./lib/openai";
+import { generateWithRetry, getTimeOfDay } from "./lib/openai";
 import { validateRequest, type ReflectionRequest } from "./lib/validate";
 
 const PORT = process.env.PORT || 3001;
@@ -33,12 +33,15 @@ function getRandomFallbackQuestions(count: number = 2): string[] {
   return shuffled.slice(0, count);
 }
 
-function determineRiskLevel(request: ReflectionRequest): "low" | "medium" | "high" {
+function determineRiskLevel(
+  request: ReflectionRequest,
+): "low" | "medium" | "high" {
   const { product, context } = request;
+  const timeOfDay = getTimeOfDay(context.localDateTime);
   let riskScore = 0;
 
-  if (context.timeOfDay === "late_night") riskScore += 2;
-  else if (context.timeOfDay === "night") riskScore += 1;
+  if (timeOfDay === "late_night") riskScore += 2;
+  else if (timeOfDay === "night") riskScore += 1;
 
   if (context.recentPurchaseCount > 3) riskScore += 2;
   else if (context.recentPurchaseCount > 1) riskScore += 1;
@@ -121,7 +124,9 @@ async function handleGenerate(req: IncomingMessage, res: ServerResponse) {
     if (!process.env.OPENAI_API_KEY) {
       console.warn("[Local Server] OPENAI_API_KEY not set, using fallbacks");
       return sendResponse(res, 200, {
-        questions: getRandomFallbackQuestions(request.context.frictionLevel >= 4 ? 3 : 2),
+        questions: getRandomFallbackQuestions(
+          request.context.frictionLevel >= 4 ? 3 : 2,
+        ),
         goalImpact,
         riskLevel,
         meta: {
@@ -172,7 +177,10 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/api/generate") {
     await handleGenerate(req, res);
   } else if (url.pathname === "/health") {
-    sendResponse(res, 200, { status: "ok", timestamp: new Date().toISOString() });
+    sendResponse(res, 200, {
+      status: "ok",
+      timestamp: new Date().toISOString(),
+    });
   } else {
     sendResponse(res, 404, { error: "Not found" });
   }

@@ -30,7 +30,7 @@ export interface ProductInfo {
 }
 
 export interface ReflectionContext {
-  timeOfDay: "morning" | "afternoon" | "evening" | "night" | "late_night"
+  localDateTime: string // ISO 8601 datetime
   goalName?: string
   recentPurchaseCount: number
   frictionLevel: number
@@ -73,9 +73,16 @@ export interface APIError {
 }
 
 /**
- * Get the current time of day category
+ * Get the current local datetime as ISO string
  */
-function getTimeOfDay(): ReflectionContext["timeOfDay"] {
+function getLocalDateTime(): string {
+  return new Date().toISOString()
+}
+
+/**
+ * Get time of day category from hour (for local risk calculation)
+ */
+function getTimeOfDay(): "morning" | "afternoon" | "evening" | "night" | "late_night" {
   const hour = new Date().getHours()
   if (hour >= 5 && hour < 12) return "morning"
   if (hour >= 12 && hour < 17) return "afternoon"
@@ -107,11 +114,12 @@ function determineLocalRiskLevel(
   product: ProductInfo,
   context: ReflectionContext
 ): "low" | "medium" | "high" {
+  const timeOfDay = getTimeOfDay()
   let score = 0
 
   // Late night shopping
-  if (context.timeOfDay === "late_night") score += 2
-  else if (context.timeOfDay === "night") score += 1
+  if (timeOfDay === "late_night") score += 2
+  else if (timeOfDay === "night") score += 1
 
   // Recent purchases
   if (context.recentPurchaseCount > 3) score += 2
@@ -184,7 +192,7 @@ export async function callProxyAPI(
   const primaryGoal = (goals || []).find((g: { isPrimary?: boolean }) => g.isPrimary)
 
   const context: ReflectionContext = {
-    timeOfDay: getTimeOfDay(),
+    localDateTime: getLocalDateTime(),
     goalName: primaryGoal?.name,
     recentPurchaseCount: recentPurchases.length,
     frictionLevel: settings?.frictionLevel || 3,

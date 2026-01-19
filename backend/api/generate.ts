@@ -12,7 +12,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-import { generateWithRetry } from "../lib/openai";
+import { generateWithRetry, getTimeOfDay } from "../lib/openai";
 import { checkRateLimit, getClientId } from "../lib/ratelimit";
 import { validateRequest, type ReflectionRequest } from "../lib/validate";
 
@@ -43,13 +43,14 @@ function determineRiskLevel(
   request: ReflectionRequest,
 ): "low" | "medium" | "high" {
   const { product, context } = request;
+  const timeOfDay = getTimeOfDay(context.localDateTime);
 
   let riskScore = 0;
 
   // Late night shopping is higher risk
-  if (context.timeOfDay === "late_night") {
+  if (timeOfDay === "late_night") {
     riskScore += 2;
-  } else if (context.timeOfDay === "night") {
+  } else if (timeOfDay === "night") {
     riskScore += 1;
   }
 
