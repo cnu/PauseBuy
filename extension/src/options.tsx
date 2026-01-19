@@ -2,38 +2,58 @@ import { useEffect, useState } from "react"
 
 import "./globals.css"
 
-interface Goal {
-  id: string
-  name: string
-  targetAmount: number
-  currentAmount: number
-  deadline: string
-}
+import { usePauseBuyStore } from "./store"
+import type { FinancialGoal } from "./store/types"
 
 function OptionsPage() {
-  const [stats, setStats] = useState({
-    savedToday: 0,
-    savedTotal: 0,
-    streak: 0
-  })
-  const [goals, setGoals] = useState<Goal[]>([])
-  const [settings, setSettings] = useState({
-    frictionLevel: 3,
-    notifications: true
+  const {
+    profile,
+    stats,
+    goals,
+    isLoading,
+    initialize,
+    updateSettings,
+    addGoal,
+    updateGoal,
+    deleteGoal
+  } = usePauseBuyStore()
+
+  const [showAddGoal, setShowAddGoal] = useState(false)
+  const [newGoal, setNewGoal] = useState({
+    name: "",
+    targetAmount: "",
+    deadline: "",
+    priority: "medium" as FinancialGoal["priority"]
   })
 
   useEffect(() => {
-    chrome.storage.local.get(["stats", "goals", "settings"], (result) => {
-      if (result.stats) setStats(result.stats)
-      if (result.goals) setGoals(result.goals)
-      if (result.settings) setSettings(result.settings)
-    })
-  }, [])
+    initialize()
+  }, [initialize])
 
-  const updateSettings = (newSettings: typeof settings) => {
-    setSettings(newSettings)
-    chrome.storage.local.set({ settings: newSettings })
+  const handleAddGoal = async () => {
+    if (!newGoal.name || !newGoal.targetAmount) return
+
+    await addGoal({
+      name: newGoal.name,
+      targetAmount: parseFloat(newGoal.targetAmount),
+      currentAmount: 0,
+      deadline: newGoal.deadline || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+      priority: newGoal.priority
+    })
+
+    setNewGoal({ name: "", targetAmount: "", deadline: "", priority: "medium" })
+    setShowAddGoal(false)
   }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f8f8f8] flex items-center justify-center">
+        <div className="text-stone">Loading...</div>
+      </div>
+    )
+  }
+
+  const settings = profile?.settings
 
   return (
     <div className="min-h-screen bg-[#f8f8f8]">
@@ -71,13 +91,85 @@ function OptionsPage() {
 
         {/* Financial Goals */}
         <section className="animate-fade-in">
-          <h2 className="text-lg font-semibold text-charcoal mb-4">Financial Goals</h2>
-          {goals.length === 0 ? (
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-charcoal">Financial Goals</h2>
+            <button className="btn-primary text-sm py-2 px-4" onClick={() => setShowAddGoal(true)}>
+              Add Goal
+            </button>
+          </div>
+
+          {/* Add Goal Form */}
+          {showAddGoal && (
+            <div className="bg-white rounded-xl p-6 shadow-card mb-4 animate-slide-up">
+              <h3 className="font-semibold text-charcoal mb-4">New Goal</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-charcoal mb-1">Goal Name</label>
+                  <input
+                    type="text"
+                    value={newGoal.name}
+                    onChange={(e) => setNewGoal({ ...newGoal, name: e.target.value })}
+                    placeholder="e.g., Summer Vacation"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-forest"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-charcoal mb-1">
+                    Target Amount
+                  </label>
+                  <input
+                    type="number"
+                    value={newGoal.targetAmount}
+                    onChange={(e) => setNewGoal({ ...newGoal, targetAmount: e.target.value })}
+                    placeholder="5000"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-forest"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-charcoal mb-1">
+                    Target Date
+                  </label>
+                  <input
+                    type="date"
+                    value={newGoal.deadline}
+                    onChange={(e) => setNewGoal({ ...newGoal, deadline: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-forest"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-charcoal mb-1">Priority</label>
+                  <select
+                    value={newGoal.priority}
+                    onChange={(e) =>
+                      setNewGoal({
+                        ...newGoal,
+                        priority: e.target.value as FinancialGoal["priority"]
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-forest"
+                  >
+                    <option value="high">High</option>
+                    <option value="medium">Medium</option>
+                    <option value="low">Low</option>
+                  </select>
+                </div>
+                <div className="flex gap-3">
+                  <button className="btn-primary flex-1" onClick={handleAddGoal}>
+                    Save Goal
+                  </button>
+                  <button className="btn-secondary flex-1" onClick={() => setShowAddGoal(false)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {goals.length === 0 && !showAddGoal ? (
             <div className="bg-white rounded-xl p-8 text-center shadow-card">
               <p className="text-stone mb-4">
                 No goals set yet. Add a goal to track your progress!
               </p>
-              <button className="btn-primary">Add Goal</button>
             </div>
           ) : (
             <div className="space-y-4">
@@ -85,12 +177,31 @@ function OptionsPage() {
                 const progress = (goal.currentAmount / goal.targetAmount) * 100
                 return (
                   <div key={goal.id} className="bg-white rounded-xl p-6 shadow-card">
-                    <div className="flex justify-between items-center mb-3">
-                      <h3 className="font-semibold text-charcoal">{goal.name}</h3>
-                      <span className="text-sm text-stone">
-                        ${goal.currentAmount.toLocaleString()} of $
-                        {goal.targetAmount.toLocaleString()}
-                      </span>
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-semibold text-charcoal">{goal.name}</h3>
+                        <span
+                          className={`text-xs px-2 py-0.5 rounded-full ${
+                            goal.priority === "high"
+                              ? "bg-red-100 text-red-700"
+                              : goal.priority === "medium"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-gray-100 text-gray-700"
+                          }`}
+                        >
+                          {goal.priority} priority
+                        </span>
+                      </div>
+                      <button
+                        className="text-stone hover:text-clay text-sm"
+                        onClick={() => deleteGoal(goal.id)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                    <div className="flex justify-between text-sm text-stone mb-2">
+                      <span>${goal.currentAmount.toLocaleString()}</span>
+                      <span>${goal.targetAmount.toLocaleString()}</span>
                     </div>
                     <div className="progress-bar">
                       <div
@@ -121,17 +232,14 @@ function OptionsPage() {
                   type="range"
                   min="1"
                   max="5"
-                  value={settings.frictionLevel}
+                  value={settings?.frictionLevel || 3}
                   onChange={(e) =>
-                    updateSettings({
-                      ...settings,
-                      frictionLevel: parseInt(e.target.value)
-                    })
+                    updateSettings({ frictionLevel: parseInt(e.target.value) as 1 | 2 | 3 | 4 | 5 })
                   }
                   className="w-32 accent-forest"
                 />
                 <span className="w-6 text-center font-semibold text-forest">
-                  {settings.frictionLevel}
+                  {settings?.frictionLevel || 3}
                 </span>
               </div>
             </div>
@@ -145,13 +253,8 @@ function OptionsPage() {
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={settings.notifications}
-                  onChange={(e) =>
-                    updateSettings({
-                      ...settings,
-                      notifications: e.target.checked
-                    })
-                  }
+                  checked={settings?.notifications ?? true}
+                  onChange={(e) => updateSettings({ notifications: e.target.checked })}
                   className="sr-only peer"
                 />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-forest rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-forest" />

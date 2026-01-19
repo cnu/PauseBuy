@@ -1,30 +1,26 @@
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 
 import "./globals.css"
 
+import { usePauseBuyStore } from "./store"
+
 function IndexPopup() {
-  const [enabled, setEnabled] = useState(true)
-  const [stats, setStats] = useState({
-    savedToday: 0,
-    savedTotal: 0,
-    streak: 0
-  })
+  const { enabled, stats, isLoading, initialize, setEnabled } = usePauseBuyStore()
 
   useEffect(() => {
-    chrome.storage.local.get(["enabled", "stats"], (result) => {
-      if (result.enabled !== undefined) {
-        setEnabled(result.enabled)
-      }
-      if (result.stats) {
-        setStats(result.stats)
-      }
-    })
-  }, [])
+    initialize()
+  }, [initialize])
 
   const toggleEnabled = () => {
-    const newEnabled = !enabled
-    setEnabled(newEnabled)
-    chrome.storage.local.set({ enabled: newEnabled })
+    setEnabled(!enabled)
+  }
+
+  if (isLoading) {
+    return (
+      <div className="w-80 min-h-[280px] flex items-center justify-center bg-[#f8f8f8]">
+        <div className="text-stone">Loading...</div>
+      </div>
+    )
   }
 
   return (
