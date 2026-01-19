@@ -1,30 +1,158 @@
 /**
  * PauseBuy Proxy API - Generate Reflection Questions
  *
- * This endpoint proxies requests to Claude API, keeping the API key secure
- * on the server side. It also handles rate limiting and Opik tracing.
+ * This Edge Function proxies requests to Claude API, keeping the API key secure
+ * on the server side. It handles CORS, request validation, and returns
+ * personalized reflection questions.
  *
  * POST /api/generate
  * Body: { product: { name, price, category }, context: { timeOfDay, goalName, ... } }
  * Returns: { questions: string[], goalImpact: object | null, riskLevel: string }
  */
 
-import type { VercelRequest, VercelResponse } from "@vercel/node"
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-// Placeholder - full implementation in pb-ybs, pb-if7, pb-8m6
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" })
+import { validateRequest, type ReflectionRequest } from "../lib/validate";
+
+// CORS headers for Chrome extension
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*", // In production, restrict to extension ID
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, X-Client-Id",
+};
+
+// Fallback questions when API is unavailable
+const FALLBACK_QUESTIONS = [
+  "Do you need this right now, or can it wait a few days?",
+  "How will you feel about this purchase in a week?",
+  "Is this aligned with your current financial goals?",
+  "Would you still want this if there was no sale?",
+  "Do you already own something that serves this purpose?",
+];
+
+function getRandomFallbackQuestions(count: number = 2): string[] {
+  const shuffled = [...FALLBACK_QUESTIONS].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, count);
+}
+
+function determineRiskLevel(
+  request: ReflectionRequest,
+): "low" | "medium" | "high" {
+  const { product, context } = request;
+
+  let riskScore = 0;
+
+  // Late night shopping is higher risk
+  if (context.timeOfDay === "late_night") {
+    riskScore += 2;
+  } else if (context.timeOfDay === "night") {
+    riskScore += 1;
   }
 
-  // TODO: Implement in feature pb-ybs (Vercel Edge Function Setup)
-  // - pb-if7: Request validation with Zod
-  // - pb-ydt: Rate limiting with Vercel KV
-  // - pb-8m6: Claude API integration
-  // - pb-oe1: Opik tracing
+  // Recent purchases in same category
+  if (context.recentPurchaseCount > 3) {
+    riskScore += 2;
+  } else if (context.recentPurchaseCount > 1) {
+    riskScore += 1;
+  }
 
-  return res.status(501).json({
-    error: "Not implemented yet",
-    message: "This endpoint will be implemented in features pb-ybs, pb-if7, pb-ydt, pb-8m6"
-  })
+  // Higher friction preference means user wants more intervention
+  if (context.frictionLevel >= 4) {
+    riskScore += 1;
+  }
+
+  // Price-based risk (higher prices = more consideration needed)
+  if (product.price > 200) {
+    riskScore += 2;
+  } else if (product.price > 50) {
+    riskScore += 1;
+  }
+
+  if (riskScore >= 4) return "high";
+  if (riskScore >= 2) return "medium";
+  return "low";
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Handle CORS preflight
+  if (req.method === "OPTIONS") {
+    return res
+      .status(200)
+      .setHeader("Access-Control-Allow-Origin", "*")
+      .setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
+      .setHeader("Access-Control-Allow-Headers", "Content-Type, X-Client-Id")
+      .end();
+  }
+
+  // Set CORS headers for all responses
+  Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+    res.setHeader(key, value);
+  });
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  // Validate request body
+  const validation = validateRequest(req.body);
+  if (!validation.valid) {
+    return res.status(400).json({
+      error: "Invalid request",
+      details: validation.errors,
+    });
+  }
+
+  const request = validation.data;
+
+  // Get client ID for rate limiting (future: pb-ydt)
+  const clientId = (req.headers["x-client-id"] as string) || "anonymous";
+
+  try {
+    // TODO: pb-ydt - Check rate limit
+    // TODO: pb-8m6 - Call Claude API
+    // TODO: pb-oe1 - Log to Opik
+
+    // For now, return intelligent fallback response
+    const riskLevel = determineRiskLevel(request);
+    const questionCount = request.context.frictionLevel >= 4 ? 3 : 2;
+    const questions = getRandomFallbackQuestions(questionCount);
+
+    // Calculate goal impact if goal is set
+    let goalImpact = null;
+    if (request.context.goalName) {
+      // Simplified calculation - real implementation would use actual goal data
+      const delayDays = Math.ceil(request.product.price / 50); // ~$50/day savings rate
+      goalImpact = {
+        goalName: request.context.goalName,
+        delayDays,
+        message: `This purchase delays your "${request.context.goalName}" goal by ${delayDays} day${delayDays > 1 ? "s" : ""}.`,
+      };
+    }
+
+    return res.status(200).json({
+      questions,
+      goalImpact,
+      riskLevel,
+      meta: {
+        clientId,
+        timestamp: new Date().toISOString(),
+        source: "fallback", // Will be "claude" when API is integrated
+      },
+    });
+  } catch (error) {
+    console.error("[PauseBuy API] Error:", error);
+
+    // Return fallback on any error
+    return res.status(200).json({
+      questions: getRandomFallbackQuestions(2),
+      goalImpact: null,
+      riskLevel: "medium",
+      meta: {
+        clientId,
+        timestamp: new Date().toISOString(),
+        source: "fallback",
+        error: true,
+      },
+    });
+  }
 }
