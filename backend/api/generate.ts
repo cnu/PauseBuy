@@ -13,13 +13,16 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 import { generateWithRetry } from "../lib/claude";
+import { checkRateLimit, getClientId } from "../lib/ratelimit";
 import { validateRequest, type ReflectionRequest } from "../lib/validate";
 
 // CORS headers for Chrome extension
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*", // In production, restrict to extension ID
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Client-Id",
+  "Access-Control-Allow-Headers": "Content-Type, X-Extension-Id",
+  "Access-Control-Expose-Headers":
+    "X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset",
 };
 
 // Fallback questions when API is unavailable
@@ -90,12 +93,10 @@ function calculateGoalImpact(request: ReflectionRequest) {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
-    return res
-      .status(200)
-      .setHeader("Access-Control-Allow-Origin", "*")
-      .setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
-      .setHeader("Access-Control-Allow-Headers", "Content-Type, X-Client-Id")
-      .end();
+    Object.entries(CORS_HEADERS).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+    return res.status(200).end();
   }
 
   // Set CORS headers for all responses
@@ -118,15 +119,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const request = validation.data;
 
-  // Get client ID for rate limiting (future: pb-ydt)
-  const clientId = (req.headers["x-client-id"] as string) || "anonymous";
+  // Get client ID for rate limiting
+  const extensionId = req.headers["x-extension-id"] as string | undefined;
+  const clientIp =
+    (req.headers["x-forwarded-for"] as string)?.split(",")[0].trim() ||
+    (req.headers["x-real-ip"] as string) ||
+    undefined;
+  const clientId = getClientId(extensionId, clientIp);
+
+  // Check rate limit
+  const rateLimit = await checkRateLimit(clientId);
+
+  // Set rate limit headers on all responses
+  res.setHeader("X-RateLimit-Limit", rateLimit.limit.toString());
+  res.setHeader("X-RateLimit-Remaining", rateLimit.remaining.toString());
+  res.setHeader("X-RateLimit-Reset", rateLimit.resetAt.toString());
+
+  if (!rateLimit.allowed) {
+    return res.status(429).json({
+      error: "Rate limit exceeded",
+      message: `Daily limit of ${rateLimit.limit} requests exceeded. Resets at ${new Date(rateLimit.resetAt).toISOString()}.`,
+      resetAt: rateLimit.resetAt,
+    });
+  }
 
   // Calculate common response fields
   const riskLevel = determineRiskLevel(request);
   const goalImpact = calculateGoalImpact(request);
 
   try {
-    // TODO: pb-ydt - Check rate limit before calling API
     // TODO: pb-oe1 - Log to Opik
 
     // Check if API key is configured
