@@ -157,12 +157,17 @@ async function handlePurchaseDetected(message: PurchaseDetectedMessage) {
   // Log event for tracking
   const { purchaseHistory = [] } = await chrome.storage.local.get("purchaseHistory")
   purchaseHistory.push({
-    eventId,
+    id: eventId,
+    eventId, // Keep for backwards compatibility
     product: message.product,
     site: message.site,
     confidence: message.confidence,
     timestamp: new Date().toISOString(),
     riskLevel: response.riskLevel,
+    questionsAsked: response.questions,
+    userResponses: [], // Will be updated on outcome
+    reflectionTime: 0, // Will be updated on outcome
+    outcome: "pending" as const, // Will be updated on outcome
     source: response.meta?.source || "unknown"
   })
   await chrome.storage.local.set({ purchaseHistory })
@@ -205,24 +210,39 @@ async function handlePurchaseOutcome(message: PurchaseOutcomeMessage) {
     "purchaseHistory"
   ])
 
-  // Log the event
-  purchaseHistory.push({
-    eventId: message.eventId,
-    outcome: message.outcome,
-    reflectionTime: message.reflectionTime,
-    timestamp: new Date().toISOString()
-  })
+  // Find and update the existing event
+  const eventIndex = purchaseHistory.findIndex(
+    (e: { eventId?: string; id?: string }) =>
+      e.eventId === message.eventId || e.id === message.eventId
+  )
+
+  let savedAmount = 0
+
+  if (eventIndex !== -1) {
+    const event = purchaseHistory[eventIndex]
+    event.outcome = message.outcome
+    event.reflectionTime = message.reflectionTime
+    savedAmount = event.product?.price || 0
+  } else {
+    // Fallback: create new entry if event not found
+    purchaseHistory.push({
+      id: message.eventId,
+      eventId: message.eventId,
+      outcome: message.outcome,
+      reflectionTime: message.reflectionTime,
+      timestamp: new Date().toISOString()
+    })
+  }
 
   // Update stats if user saved money
   if (message.outcome === "saved" || message.outcome === "cooled_off") {
-    // TODO: Get actual price from the event
-    stats.savedToday += 50 // Placeholder
-    stats.savedTotal += 50
+    stats.savedToday += savedAmount
+    stats.savedTotal += savedAmount
   }
 
   await chrome.storage.local.set({ stats, purchaseHistory })
 
-  return { success: true }
+  return { success: true, savedAmount }
 }
 
 async function handleGetStats() {

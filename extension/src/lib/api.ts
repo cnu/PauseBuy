@@ -5,9 +5,12 @@
  * Includes rate limit handling, error recovery, and fallbacks.
  */
 
+import type { FinancialGoal } from "../store/types"
+
+import { calculateGoalImpact } from "./goalImpact"
+
 // Backend API URL - use environment variable in production
-const API_BASE_URL =
-  process.env.PLASMO_PUBLIC_API_URL || "https://pausebuy-api.vercel.app"
+const API_BASE_URL = process.env.PLASMO_PUBLIC_API_URL || "https://pausebuy-api.vercel.app"
 
 // Fallback questions when API is unavailable
 const FALLBACK_QUESTIONS = [
@@ -129,17 +132,21 @@ function determineLocalRiskLevel(
 function createFallbackResponse(
   product: ProductInfo,
   context: ReflectionContext,
+  goals: FinancialGoal[],
   error?: string
 ): ReflectionResponse {
   const questionCount = context.frictionLevel >= 4 ? 3 : 2
 
+  // Use the goal impact calculator for accurate impact assessment
+  const impact = calculateGoalImpact(goals, product.price)
+
   return {
     questions: getRandomFallbackQuestions(questionCount),
-    goalImpact: context.goalName
+    goalImpact: impact
       ? {
-          goalName: context.goalName,
-          delayDays: Math.ceil(product.price / 50),
-          message: `This purchase delays your "${context.goalName}" goal by ${Math.ceil(product.price / 50)} day(s).`
+          goalName: impact.goalName,
+          delayDays: impact.delayDays,
+          message: impact.message
         }
       : null,
     riskLevel: determineLocalRiskLevel(product, context),
@@ -170,8 +177,7 @@ export async function callProxyAPI(
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
   const recentPurchases = (purchaseHistory || []).filter(
     (p: { timestamp: string; category?: string }) =>
-      new Date(p.timestamp).getTime() > weekAgo &&
-      (!p.category || p.category === product.category)
+      new Date(p.timestamp).getTime() > weekAgo && (!p.category || p.category === product.category)
   )
 
   // Get primary goal name
@@ -202,10 +208,7 @@ export async function callProxyAPI(
     // Extract rate limit info from headers
     const rateLimit: RateLimitInfo = {
       limit: parseInt(response.headers.get("X-RateLimit-Limit") || "100", 10),
-      remaining: parseInt(
-        response.headers.get("X-RateLimit-Remaining") || "100",
-        10
-      ),
+      remaining: parseInt(response.headers.get("X-RateLimit-Remaining") || "100", 10),
       resetAt: parseInt(
         response.headers.get("X-RateLimit-Reset") || String(Date.now() + 86400000),
         10
@@ -226,7 +229,7 @@ export async function callProxyAPI(
       })
 
       return {
-        response: createFallbackResponse(product, context, "rate_limit_exceeded"),
+        response: createFallbackResponse(product, context, goals || [], "rate_limit_exceeded"),
         rateLimit
       }
     }
@@ -236,7 +239,12 @@ export async function callProxyAPI(
       const errorText = await response.text()
       console.error("[PauseBuy API] Error:", response.status, errorText)
       return {
-        response: createFallbackResponse(product, context, `api_error_${response.status}`),
+        response: createFallbackResponse(
+          product,
+          context,
+          goals || [],
+          `api_error_${response.status}`
+        ),
         rateLimit
       }
     }
@@ -260,6 +268,7 @@ export async function callProxyAPI(
       response: createFallbackResponse(
         product,
         context,
+        goals || [],
         error instanceof Error ? error.message : "network_error"
       )
     }
