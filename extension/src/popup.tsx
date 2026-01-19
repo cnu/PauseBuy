@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react"
 
-import "./style.css"
+import "./globals.css"
 
 function IndexPopup() {
   const [enabled, setEnabled] = useState(true)
@@ -11,7 +11,6 @@ function IndexPopup() {
   })
 
   useEffect(() => {
-    // Load state from storage
     chrome.storage.local.get(["enabled", "stats"], (result) => {
       if (result.enabled !== undefined) {
         setEnabled(result.enabled)
@@ -29,51 +28,58 @@ function IndexPopup() {
   }
 
   return (
-    <div className="popup-container">
-      <header className="popup-header">
-        <div className="logo">
-          <span className="logo-icon">⏸️</span>
-          <span className="logo-text">PauseBuy</span>
+    <div className="w-80 min-h-[280px] flex flex-col bg-[#f8f8f8]">
+      {/* Header */}
+      <header className="flex justify-between items-center p-4 bg-white border-b border-gray-200">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">⏸️</span>
+          <span className="text-lg font-semibold text-forest">PauseBuy</span>
         </div>
         <button
-          className={`toggle-btn ${enabled ? 'active' : ''}`}
+          className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all duration-200
+            ${
+              enabled
+                ? "bg-forest text-white border-2 border-forest"
+                : "bg-white text-stone border-2 border-gray-200"
+            } hover:-translate-y-0.5`}
           onClick={toggleEnabled}
-          aria-label={enabled ? 'Disable PauseBuy' : 'Enable PauseBuy'}
+          aria-label={enabled ? "Disable PauseBuy" : "Enable PauseBuy"}
         >
-          {enabled ? 'ON' : 'OFF'}
+          {enabled ? "ON" : "OFF"}
         </button>
       </header>
 
-      <main className="popup-content">
-        <div className="stats-card">
-          <div className="stat-item">
-            <span className="stat-value">${stats.savedToday}</span>
-            <span className="stat-label">Saved Today</span>
+      {/* Content */}
+      <main className="flex-1 p-4">
+        {/* Stats Card */}
+        <div className="stats-card flex justify-between items-center">
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold">${stats.savedToday}</span>
+            <span className="text-xs opacity-90 mt-1">Saved Today</span>
           </div>
-          <div className="stat-divider" />
-          <div className="stat-item">
-            <span className="stat-value">${stats.savedTotal}</span>
-            <span className="stat-label">Total Saved</span>
+          <div className="w-px h-10 bg-white/30" />
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold">${stats.savedTotal}</span>
+            <span className="text-xs opacity-90 mt-1">Total Saved</span>
           </div>
-          <div className="stat-divider" />
-          <div className="stat-item">
-            <span className="stat-value">{stats.streak}</span>
-            <span className="stat-label">Day Streak</span>
+          <div className="w-px h-10 bg-white/30" />
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold">{stats.streak}</span>
+            <span className="text-xs opacity-90 mt-1">Day Streak</span>
           </div>
         </div>
 
-        <div className="quick-links">
-          <button
-            className="link-btn"
-            onClick={() => chrome.runtime.openOptionsPage()}
-          >
+        {/* Quick Links */}
+        <div className="mt-4">
+          <button className="btn-secondary w-full" onClick={() => chrome.runtime.openOptionsPage()}>
             View Dashboard
           </button>
         </div>
       </main>
 
-      <footer className="popup-footer">
-        <p className="tagline">Mindful shopping, one pause at a time</p>
+      {/* Footer */}
+      <footer className="p-3 text-center border-t border-gray-200 bg-white">
+        <p className="text-xs text-stone">Mindful shopping, one pause at a time</p>
       </footer>
     </div>
   )

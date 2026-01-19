@@ -1,0 +1,107 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Primary Palette */
+    --color-forest-green: #2c5f2d;
+    --color-fresh-green: #97c04c;
+    --color-sage-green: #5d8a3a;
+    --color-deep-forest: #234a24;
+
+    /* Accent Palette */
+    --color-terracotta: #f4a259;
+    --color-clay: #e76f51;
+
+    /* Neutrals */
+    --color-charcoal: #1a1a1a;
+    --color-graphite: #2d2d2d;
+    --color-slate: #3a3a3a;
+    --color-stone: #666666;
+    --color-light-gray: #e8e8e8;
+    --color-soft-white: #f8f8f8;
+
+    /* Semantic Colors */
+    --color-success: var(--color-fresh-green);
+    --color-warning: var(--color-terracotta);
+    --color-danger: var(--color-clay);
+    --color-info: var(--color-sage-green);
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #2c5f2d 0%, #97c04c 100%);
+    --gradient-success: linear-gradient(135deg, #5d8a3a 0%, #97c04c 100%);
+    --gradient-warm: linear-gradient(135deg, #e76f51 0%, #f4a259 100%);
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, sans-serif;
+    color: var(--color-charcoal);
+    background: var(--color-soft-white);
+    line-height: 1.5;
+  }
+}
+
+@layer components {
+  /* Primary Button */
+  .btn-primary {
+    @apply bg-forest text-white px-6 py-3 rounded-lg font-semibold
+           transition-all duration-200 ease-out
+           hover:bg-forest-deep hover:-translate-y-0.5
+           focus:outline-none focus:ring-2 focus:ring-forest focus:ring-offset-2;
+    box-shadow: 0 4px 12px rgba(44, 95, 45, 0.2);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 6px 16px rgba(44, 95, 45, 0.3);
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply bg-white text-forest px-6 py-3 rounded-lg font-semibold
+           border-2 border-forest transition-all duration-200 ease-out
+           hover:bg-forest hover:text-white
+           focus:outline-none focus:ring-2 focus:ring-forest focus:ring-offset-2;
+  }
+
+  /* Stats Card */
+  .stats-card {
+    @apply rounded-xl p-6 text-white text-center;
+    background: var(--gradient-primary);
+    box-shadow: 0 4px 16px rgba(44, 95, 45, 0.15);
+  }
+
+  /* Progress Bar */
+  .progress-bar {
+    @apply w-full h-2 bg-gray-200 rounded-full overflow-hidden;
+  }
+
+  .progress-fill {
+    @apply h-full rounded-full transition-all duration-300 ease-out;
+    background: var(--gradient-primary);
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .badge-success {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .badge-warning {
+    @apply bg-orange-100 text-orange-800;
+  }
+
+  .badge-danger {
+    @apply bg-red-100 text-red-800;
+  }
+}
