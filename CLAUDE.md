@@ -6,19 +6,76 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 PauseBuy is an AI-powered Chrome extension that helps users resist impulse purchases by introducing intelligent friction at checkout. It uses Claude API to generate contextual reflective questions when users are about to buy something.
 
-**Status:** Pre-development (planning documents complete, no code yet)
+**Status:** Active development - extension scaffold complete
 
-## Tech Stack (Planned)
+## Repository Structure
 
-- **Extension Framework:** Plasmo (React-based, Manifest V3)
-- **Language:** TypeScript
-- **UI:** React + Tailwind CSS
-- **State:** Zustand with Chrome Storage sync
-- **AI:** Claude 3 Haiku via proxy backend
-- **Backend:** Vercel Edge Functions (proxy for API calls)
-- **Observability:** Comet Opik for LLM tracing
-- **Testing:** Vitest (unit) + Playwright (E2E)
-- **Validation:** Zod schemas
+```
+PauseBuy/
+├── extension/              # Chrome extension (Plasmo)
+│   ├── src/
+│   │   ├── popup.tsx       # Extension popup UI
+│   │   ├── options.tsx     # Dashboard/options page
+│   │   ├── background.ts   # Service worker
+│   │   ├── contents/       # Content scripts
+│   │   └── style.css       # Shared styles
+│   ├── assets/             # Icons, images
+│   ├── package.json
+│   └── tsconfig.json
+├── backend/                # Vercel Edge Functions
+│   ├── api/
+│   │   └── generate.ts     # Claude API proxy endpoint
+│   ├── lib/
+│   │   └── validate.ts     # Zod request validation
+│   ├── package.json
+│   └── vercel.json
+├── docs/                   # Planning documents
+│   ├── PauseBuy_PRD.md
+│   ├── PauseBuy_Technical_Architecture.md
+│   └── PauseBuy_Style_Guide.md
+├── images/                 # Brand assets
+└── .beads/                 # Issue tracking
+```
+
+## Build Commands
+
+### Extension
+```bash
+cd extension
+pnpm install          # Install dependencies
+pnpm dev              # Development mode with hot reload
+pnpm build            # Production build → extension/build/chrome-mv3-prod/
+pnpm test             # Run tests (Vitest)
+pnpm lint             # Lint code
+```
+
+### Backend
+```bash
+cd backend
+pnpm install          # Install dependencies
+pnpm dev              # Local dev server (Vercel CLI)
+pnpm deploy           # Deploy to Vercel
+```
+
+### Loading Extension in Chrome
+1. Run `pnpm build` in `extension/`
+2. Go to `chrome://extensions`
+3. Enable "Developer mode"
+4. Click "Load unpacked"
+5. Select `extension/build/chrome-mv3-prod/`
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Extension Framework | Plasmo (Manifest V3) |
+| Language | TypeScript (strict mode) |
+| UI | React 18 + Tailwind CSS |
+| State | Zustand + Chrome Storage |
+| AI | Claude 3 Haiku via proxy |
+| Backend | Vercel Edge Functions |
+| Validation | Zod schemas |
+| Observability | Comet Opik |
 
 ## Architecture Overview
 
@@ -29,43 +86,17 @@ PauseBuy is an AI-powered Chrome extension that helps users resist impulse purch
 
 ### Extension Components (Manifest V3)
 - `background.ts` - Service worker: API calls, alarms, message routing
-- `content.ts` - Content script: DOM analysis, purchase detection, overlay injection
+- `contents/detector.ts` - Content script: DOM analysis, purchase detection
 - `popup.tsx` - Quick stats, toggle, cooling-off list preview
-- `dashboard.tsx` - Full analytics, goal management, settings
-
-### Planned Directory Structure
-```
-pausebuy/
-├── src/
-│   ├── background/       # Service worker
-│   │   ├── api/          # Proxy client, Opik client
-│   │   └── handlers/     # Purchase events, storage ops
-│   ├── content/
-│   │   ├── detectors/    # Site-specific purchase detection
-│   │   ├── extractors/   # Product info extraction
-│   │   └── overlay/      # React overlay component
-│   ├── popup/            # Extension popup UI
-│   ├── dashboard/        # Options page
-│   └── shared/           # Types, constants, utils
-├── backend/              # Vercel Edge Functions
-│   ├── api/
-│   │   └── generate.ts   # Claude API proxy
-│   └── lib/              # Rate limiting, validation, Opik
-└── tests/
-```
-
-## Key Design Decisions
+- `options.tsx` - Full analytics dashboard, goal management, settings
 
 ### Purchase Detection Pipeline
 Multi-stage confidence scoring (URL patterns + button text + DOM analysis). Threshold of 60+ triggers the reflection overlay. Site-specific configs for major retailers (Amazon, Shopify, eBay, etc.).
 
 ### Privacy Model
-- Local storage: Full purchase history, financial goals, settings
-- Sent to proxy: Product name, price, category, time of day, goal name (no amount)
-- Never sent: URLs, browsing history, PII, goal amounts
-
-### Rate Limiting
-100 requests/day per anonymous client ID, enforced server-side via Vercel KV.
+- **Local storage:** Full purchase history, financial goals, settings
+- **Sent to proxy:** Product name, price, category, time of day, goal name (no amount)
+- **Never sent:** URLs, browsing history, PII, goal amounts
 
 ## Style Guide Essentials
 
@@ -80,19 +111,13 @@ Multi-stage confidence scoring (URL patterns + button text + DOM analysis). Thre
 ```
 
 ### Brand Identity
-- Logo icon: Pause button (literal representation of "pause before buying")
-- Tone: Warm, supportive, non-judgmental - like a thoughtful friend
-- Nature-focused icons preferred (use growth emojis like plant/seedling over generic checkmarks)
-
-### Voice Guidelines
-- Warm but not overly casual
-- Wise but not preachy
-- Supportive but honest
-- Growth-oriented (celebrate progress, not just avoidance)
+- Logo icon: ⏸️ Pause button
+- Tone: Warm, supportive, non-judgmental
+- Nature-focused icons (🌱🌿) over generic symbols
 
 ## Issue Tracking
 
-This project uses **beads** (`bd`) for issue tracking. Issues are stored in `.beads/issues.jsonl`.
+This project uses **beads** (`bd`) for issue tracking.
 
 ```bash
 bd ready                              # Find available work
@@ -110,9 +135,3 @@ When ending a work session:
 3. Update issue statuses
 4. **Push to remote** (mandatory - work is not complete until pushed)
 5. Verify with `git status` showing "up to date with origin"
-
-## Reference Documents
-
-- `PauseBuy_PRD.md` - Product requirements, user stories, acceptance criteria
-- `PauseBuy_Technical_Architecture.md` - Detailed system design, data flows, API schemas
-- `PauseBuy_Style_Guide.md` - Complete design system, components, accessibility

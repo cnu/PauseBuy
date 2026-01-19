@@ -1,0 +1,47 @@
+{
+  "name": "pausebuy",
+  "displayName": "PauseBuy",
+  "version": "0.1.0",
+  "description": "AI-powered impulse purchase blocker that helps you make mindful buying decisions",
+  "author": "PauseBuy Team",
+  "scripts": {
+    "dev": "plasmo dev",
+    "build": "plasmo build",
+    "package": "plasmo package",
+    "test": "vitest",
+    "lint": "eslint src --ext .ts,.tsx",
+    "format": "prettier --write src"
+  },
+  "dependencies": {
+    "plasmo": "^0.90.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@plasmohq/prettier-plugin-sort-imports": "^4.0.1",
+    "@types/chrome": "^0.0.268",
+    "@types/node": "^20.11.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.3.0"
+  },
+  "manifest": {
+    "host_permissions": [
+      "https://*.amazon.com/*",
+      "https://*.amazon.co.uk/*",
+      "https://*.ebay.com/*",
+      "https://*.walmart.com/*",
+      "https://*.target.com/*",
+      "https://*.bestbuy.com/*",
+      "https://*.etsy.com/*",
+      "https://*.shopify.com/*",
+      "https://*.myshopify.com/*"
+    ],
+    "permissions": [
+      "storage",
+      "alarms",
+      "notifications"
+    ]
+  }
+}

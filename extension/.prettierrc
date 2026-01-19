@@ -1,0 +1,17 @@
+{
+  "semi": false,
+  "singleQuote": false,
+  "trailingComma": "none",
+  "tabWidth": 2,
+  "printWidth": 100,
+  "plugins": ["@plasmohq/prettier-plugin-sort-imports"],
+  "importOrder": [
+    "^react",
+    "^plasmo",
+    "^@plasmohq/(.*)$",
+    "^~(.*)$",
+    "^[./]"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true
+}
