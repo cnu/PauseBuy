@@ -72,9 +72,11 @@ function getButtonScore(): number {
   let maxScore = 0
 
   for (const button of buttons) {
-    const text = button.textContent?.trim() ||
-                 (button as HTMLInputElement).value ||
-                 button.getAttribute("aria-label") || ""
+    const text =
+      button.textContent?.trim() ||
+      (button as HTMLInputElement).value ||
+      button.getAttribute("aria-label") ||
+      ""
 
     for (const pattern of PURCHASE_BUTTON_PATTERNS) {
       if (pattern.test(text)) {
@@ -93,7 +95,9 @@ function getDomScore(): number {
   let score = 0
 
   // Check for price displays
-  const priceElements = document.querySelectorAll('[class*="price"], [class*="total"], [data-price]')
+  const priceElements = document.querySelectorAll(
+    '[class*="price"], [class*="total"], [data-price]'
+  )
   if (priceElements.length > 0) {
     score += 10
   }
@@ -182,7 +186,9 @@ function detectPurchaseIntent() {
   const domScore = getDomScore()
   const totalScore = urlScore + buttonScore + domScore
 
-  console.log(`[PauseBuy] Detection scores - URL: ${urlScore}, Button: ${buttonScore}, DOM: ${domScore}, Total: ${totalScore}`)
+  console.log(
+    `[PauseBuy] Detection scores - URL: ${urlScore}, Button: ${buttonScore}, DOM: ${domScore}, Total: ${totalScore}`
+  )
 
   // Only trigger if confidence threshold is met
   if (totalScore >= 60) {
@@ -192,19 +198,24 @@ function detectPurchaseIntent() {
     const site = window.location.hostname
 
     // Send message to background script
-    chrome.runtime.sendMessage({
-      type: "PURCHASE_DETECTED",
-      product,
-      site,
-      confidence: totalScore
-    }).then((response) => {
-      if (response?.blocked) {
-        console.log("[PauseBuy] Purchase detected, showing reflection overlay")
-        // TODO: Inject reflection overlay
-      }
-    }).catch((error) => {
-      console.error("[PauseBuy] Error sending detection message:", error)
-    })
+    chrome.runtime
+      .sendMessage({
+        type: "PURCHASE_DETECTED",
+        product,
+        site,
+        confidence: totalScore
+      })
+      .then((response) => {
+        if (response?.blocked) {
+          console.log("[PauseBuy] Purchase detected, showing reflection overlay")
+          // The overlay content script will receive a SHOW_OVERLAY message from background
+        } else if (response?.reason) {
+          console.log(`[PauseBuy] Purchase not blocked: ${response.reason}`)
+        }
+      })
+      .catch((error) => {
+        console.error("[PauseBuy] Error sending detection message:", error)
+      })
   }
 }
 
@@ -240,16 +251,20 @@ setInterval(() => {
 }, 1000)
 
 // Watch for clicks on purchase buttons
-document.addEventListener("click", (event) => {
-  const target = event.target as HTMLElement
-  const buttonText = target.textContent || ""
+document.addEventListener(
+  "click",
+  (event) => {
+    const target = event.target as HTMLElement
+    const buttonText = target.textContent || ""
 
-  for (const pattern of PURCHASE_BUTTON_PATTERNS) {
-    if (pattern.test(buttonText)) {
-      detectPurchaseIntent()
-      break
+    for (const pattern of PURCHASE_BUTTON_PATTERNS) {
+      if (pattern.test(buttonText)) {
+        detectPurchaseIntent()
+        break
+      }
     }
-  }
-}, true)
+  },
+  true
+)
 
 export {}

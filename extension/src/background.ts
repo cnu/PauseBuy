@@ -10,6 +10,8 @@
 
 import type { PlasmoMessaging } from "@plasmohq/messaging"
 
+import { callProxyAPI, isRateLimited } from "./lib/api"
+
 // Initialize default state on install
 chrome.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === "install") {
@@ -74,7 +76,20 @@ export interface GetStatsMessage {
 
 // Handle messages from content scripts and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  handleMessage(message, sender).then(sendResponse)
+  handleMessage(message, sender).then(async (response) => {
+    // If purchase was blocked, send overlay message to the tab
+    if (response?.blocked && sender.tab?.id) {
+      await chrome.tabs.sendMessage(sender.tab.id, {
+        type: "SHOW_OVERLAY",
+        eventId: response.eventId,
+        product: message.product,
+        questions: response.questions,
+        goalImpact: response.goalImpact,
+        riskLevel: response.riskLevel
+      })
+    }
+    sendResponse(response)
+  })
   return true // Keep channel open for async response
 })
 
@@ -102,28 +117,63 @@ async function handleMessage(
 }
 
 async function handlePurchaseDetected(message: PurchaseDetectedMessage) {
-  const { enabled } = await chrome.storage.local.get("enabled")
+  const { enabled, settings } = await chrome.storage.local.get(["enabled", "settings"])
 
   if (!enabled) {
     return { blocked: false, reason: "extension_disabled" }
   }
 
-  // TODO: Call proxy API for reflection questions
-  // For now, return fallback questions
-  const fallbackQuestions = [
-    "Do you need this right now, or can it wait a few days?",
-    "How will you feel about this purchase in a week?",
-    "Is this aligned with your current financial goals?"
-  ]
+  // Check quiet hours
+  if (settings?.quietHours) {
+    const now = new Date()
+    const currentHour = now.getHours()
+    const { start, end } = settings.quietHours
+    if (
+      (start <= end && currentHour >= start && currentHour < end) ||
+      (start > end && (currentHour >= start || currentHour < end))
+    ) {
+      return { blocked: false, reason: "quiet_hours" }
+    }
+  }
+
+  // Check if site is in enabled list
+  if (settings?.enabledSites?.length > 0) {
+    const siteEnabled = settings.enabledSites.some((site: string) => message.site.includes(site))
+    if (!siteEnabled) {
+      return { blocked: false, reason: "site_not_enabled" }
+    }
+  }
+
+  // Check confidence threshold (minimum 50%)
+  if (message.confidence < 50) {
+    return { blocked: false, reason: "low_confidence" }
+  }
 
   const eventId = crypto.randomUUID()
+
+  // Call proxy API for reflection questions
+  const { response, rateLimit } = await callProxyAPI(message.product)
+
+  // Log event for tracking
+  const { purchaseHistory = [] } = await chrome.storage.local.get("purchaseHistory")
+  purchaseHistory.push({
+    eventId,
+    product: message.product,
+    site: message.site,
+    confidence: message.confidence,
+    timestamp: new Date().toISOString(),
+    riskLevel: response.riskLevel,
+    source: response.meta?.source || "unknown"
+  })
+  await chrome.storage.local.set({ purchaseHistory })
 
   return {
     blocked: true,
     eventId,
-    questions: fallbackQuestions.slice(0, 2),
-    goalImpact: null,
-    riskLevel: "medium" as const
+    questions: response.questions,
+    goalImpact: response.goalImpact,
+    riskLevel: response.riskLevel,
+    rateLimit
   }
 }
 
@@ -150,7 +200,10 @@ async function handleSaveForLater(message: SaveForLaterMessage) {
 }
 
 async function handlePurchaseOutcome(message: PurchaseOutcomeMessage) {
-  const { stats, purchaseHistory = [] } = await chrome.storage.local.get(["stats", "purchaseHistory"])
+  const { stats, purchaseHistory = [] } = await chrome.storage.local.get([
+    "stats",
+    "purchaseHistory"
+  ])
 
   // Log the event
   purchaseHistory.push({
@@ -181,7 +234,10 @@ async function handleGetStats() {
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name.startsWith("cooling-off-")) {
     const itemId = alarm.name.replace("cooling-off-", "")
-    const { coolingOffList = [], settings } = await chrome.storage.local.get(["coolingOffList", "settings"])
+    const { coolingOffList = [], settings } = await chrome.storage.local.get([
+      "coolingOffList",
+      "settings"
+    ])
 
     const item = coolingOffList.find((i: { id: string }) => i.id === itemId)
 
@@ -191,10 +247,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         iconUrl: "assets/icon.png",
         title: "Still want this?",
         message: `Your 48-hour cooling off period for "${item.product.name}" has ended.`,
-        buttons: [
-          { title: "View Item" },
-          { title: "Remove" }
-        ]
+        buttons: [{ title: "View Item" }, { title: "Remove" }]
       })
     }
   }
