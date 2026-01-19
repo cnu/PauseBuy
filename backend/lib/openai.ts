@@ -33,13 +33,33 @@ export interface LLMResponse {
 }
 
 /**
+ * Parse hour and minutes from ISO datetime string
+ * Extracts the time components directly from the string to preserve client's local time
+ */
+function parseTimeFromISO(isoDateTime: string): {
+  hour: number;
+  minutes: number;
+} {
+  // ISO format: 2026-01-19T23:35:00.000Z or 2026-01-19T23:35:00
+  const timeMatch = isoDateTime.match(/T(\d{2}):(\d{2})/);
+  if (timeMatch) {
+    return {
+      hour: parseInt(timeMatch[1], 10),
+      minutes: parseInt(timeMatch[2], 10),
+    };
+  }
+  // Fallback to Date parsing (uses server timezone)
+  const date = new Date(isoDateTime);
+  return { hour: date.getHours(), minutes: date.getMinutes() };
+}
+
+/**
  * Get time of day category from ISO datetime
  */
 export function getTimeOfDay(
   isoDateTime: string,
 ): "morning" | "afternoon" | "evening" | "night" | "late_night" {
-  const date = new Date(isoDateTime);
-  const hour = date.getHours();
+  const { hour } = parseTimeFromISO(isoDateTime);
   if (hour >= 5 && hour < 12) return "morning";
   if (hour >= 12 && hour < 17) return "afternoon";
   if (hour >= 17 && hour < 21) return "evening";
@@ -51,14 +71,12 @@ export function getTimeOfDay(
  * Format datetime for prompt
  */
 function formatTimeContext(isoDateTime: string): string {
-  const date = new Date(isoDateTime);
+  const { hour, minutes } = parseTimeFromISO(isoDateTime);
   const timeOfDay = getTimeOfDay(isoDateTime);
-  const hour = date.getHours();
-  const minutes = date.getMinutes().toString().padStart(2, "0");
   const ampm = hour >= 12 ? "PM" : "AM";
   const hour12 = hour % 12 || 12;
 
-  const timeStr = `${hour12}:${minutes} ${ampm}`;
+  const timeStr = `${hour12}:${minutes.toString().padStart(2, "0")} ${ampm}`;
 
   const contexts: Record<string, string> = {
     morning: `It's ${timeStr} in the morning`,
