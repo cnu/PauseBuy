@@ -22,7 +22,7 @@
 | Target Platform | Chrome Extension (Manifest V3) |
 | Hackathon Category | Financial Health ($5,000) |
 | Timeline | 3 weeks (January 13 - February 3, 2025) |
-| Tech Stack | TypeScript, React, Tailwind CSS, Claude API, Comet Opik |
+| Tech Stack | TypeScript, React, Tailwind CSS, OpenAI GPT-5 Mini, Comet Opik |
 
 ---
 
@@ -187,7 +187,7 @@ PauseBuy follows a client-heavy architecture with minimal backend requirements, 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | Browser Extension | TypeScript, React, Tailwind CSS | UI, detection logic, local storage |
-| AI Service | Claude API (claude-3-haiku) | Generate reflective questions |
+| AI Service | OpenAI GPT-5 Mini | Generate reflective questions |
 | Observability | Comet Opik | LLM tracing, evaluation, optimization |
 | Data Storage | Chrome Storage API (local) | User preferences, history, goals |
 | Analytics Backend | Vercel Edge Functions | Anonymous aggregated analytics |
@@ -205,11 +205,11 @@ PauseBuy follows a client-heavy architecture with minimal backend requirements, 
 
 ### 6.3 AI Integration Details
 
-**LLM Selection:** Claude 3 Haiku (`claude-3-haiku-20240307`)
+**LLM Selection:** OpenAI GPT-5 Mini (`gpt-5-mini`)
 
 **Rationale:**
 - Fast response time (<1 second) for seamless UX
-- Low cost ($0.25/M input, $1.25/M output) for sustainable free tier
+- Very low cost - cheaper than alternatives for sustainable free tier
 - Sufficient intelligence for reflection question generation
 
 **Prompt Engineering:**
@@ -224,7 +224,7 @@ Comprehensive observability implementation to qualify for the "Best Use of Opik"
 
 ### 7.1 Tracing Implementation
 
-- **All LLM Calls Traced:** Every Claude API call logged with full request/response
+- **All LLM Calls Traced:** Every OpenAI API call logged with full request/response
 - **Span Hierarchy:** Purchase Detection → Context Gathering → Question Generation → User Response
 - **Metadata Captured:** Product category, price, time of day, user friction level, outcome (bought/saved)
 
@@ -399,7 +399,7 @@ interface Achievement {
 | Week | Focus Area | Deliverables |
 |------|------------|--------------|
 | **Week 1** | Foundation & Detection | Extension scaffold, purchase detection for Amazon/Shopify, basic UI overlay, Opik setup |
-| **Week 2** | AI & Core Features | Claude integration, prompt engineering, cooling-off list, goal tracking, popup UI |
+| **Week 2** | AI & Core Features | OpenAI GPT-5 Mini integration, prompt engineering, cooling-off list, goal tracking, popup UI |
 | **Week 3** | Polish & Evaluation | Dashboard, Opik evaluations, A/B tests, bug fixes, documentation, demo video |
 
 ### 10.3 Detailed Week 1 Tasks
@@ -465,7 +465,7 @@ Day 5-7: Basic UI
 |------|------------|--------|------------|
 | User annoyance leading to uninstall | High | High | Adjustable friction levels, easy bypass for genuine needs, learn user patterns |
 | E-commerce sites block extension | Medium | Medium | Graceful degradation, generic detection methods, no site modification |
-| API costs exceed budget | Medium | Medium | Use Haiku model, cache common questions, implement usage limits |
+| API costs exceed budget | Medium | Medium | Use GPT-5 Mini model, cache common questions, implement usage limits |
 | Detection fails on new sites | High | Low | Generic heuristics + user-reported site requests |
 | Privacy concerns | Low | High | All data local, no purchase data sent to servers, transparent policy |
 | LLM generates inappropriate questions | Low | Medium | Content filtering, user feedback loop, prompt guardrails |
@@ -543,7 +543,7 @@ Format as a JSON array of strings.
 | Extension Framework | Plasmo | React-based, Manifest V3 compatible, great DX |
 | Styling | Tailwind CSS | Rapid UI development, small bundle |
 | State Management | Zustand | Lightweight, Chrome Storage sync support |
-| AI SDK | Anthropic TypeScript SDK | Official SDK, good types |
+| AI SDK | OpenAI TypeScript SDK | Official SDK, good types |
 | Observability | Comet Opik | Required for hackathon, excellent LLM tracing |
 | Charts | Recharts | React-native, good for dashboards |
 | Build | Vite + TypeScript | Fast builds, excellent type safety |
@@ -557,7 +557,7 @@ Format as a JSON array of strings.
 | Average User | 5 | ~500 | $0.005 | $0.15 |
 | Heavy User | 15 | ~500 | $0.015 | $0.45 |
 
-*Based on Claude 3 Haiku pricing: $0.25/M input, $1.25/M output*
+*Based on OpenAI GPT-5 Mini pricing - significantly lower than alternatives*
 
 ### 13.6 Privacy Policy Summary
 
@@ -574,7 +574,7 @@ Format as a JSON array of strings.
 
 - [Chrome Extension Manifest V3 Documentation](https://developer.chrome.com/docs/extensions/mv3/)
 - [Plasmo Framework](https://docs.plasmo.com/)
-- [Anthropic Claude API](https://docs.anthropic.com/)
+- [OpenAI API](https://platform.openai.com/docs)
 - [Comet Opik Documentation](https://www.comet.com/docs/opik/)
 - [Encode Club Hackathon Details](https://www.encodeclub.com/programmes/comet-resolution-v2-hackathon)
 

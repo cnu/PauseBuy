@@ -38,7 +38,7 @@ This document outlines the complete technical architecture for PauseBuy, an AI-p
 ### 1.1 Architecture Goals
 
 - **Privacy-First Design**: All user data stored locally using Chrome Storage API
-- **Secure API Access**: Anthropic API key stored server-side, never exposed to clients
+- **Secure API Access**: OpenAI API key stored server-side, never exposed to clients
 - **Sub-2-Second Latency**: Fast AI response times for seamless UX
 - **Cost Control**: Server-side rate limiting and usage tracking
 - **Observability**: Comprehensive tracing and evaluation via Comet Opik integration
@@ -87,22 +87,22 @@ flowchart TB
             Validator --> KeyVault
         end
         
-        Claude["🤖 Anthropic API<br/>Claude 3 Haiku<br/>Key Never Exposed"]
+        OpenAI["🤖 OpenAI API<br/>GPT-5 Mini<br/>Key Never Exposed"]
         Opik["📈 Comet Opik<br/>LLM Tracing | Evaluations"]
         
-        KeyVault --> Claude
+        KeyVault --> OpenAI
         KeyVault --> Opik
     end
     
     ServiceWorker -->|"HTTPS<br/>(Anonymized Data)"| RateLimiter
-    Claude -->|Response| KeyVault
+    OpenAI -->|Response| KeyVault
     KeyVault -->|Questions| ServiceWorker
 
     style Browser fill:#e0f2fe,stroke:#0284c7
     style Extension fill:#dbeafe,stroke:#3b82f6
     style Proxy fill:#1e293b,stroke:#475569,color:#fff
     style ChromeStorage fill:#dcfce7,stroke:#22c55e
-    style Claude fill:#dbeafe,stroke:#3b82f6
+    style OpenAI fill:#dbeafe,stroke:#3b82f6
     style Opik fill:#dcfce7,stroke:#22c55e
 ```
 
@@ -134,7 +134,7 @@ sequenceDiagram
     participant CS as Content Script
     participant SW as Service Worker
     participant Proxy as Proxy Backend
-    participant Claude as Claude API
+    participant OpenAI as OpenAI API
     participant Pop as Popup
 
     Note over CS: User clicks "Buy Now"
@@ -144,8 +144,8 @@ sequenceDiagram
     SW->>Proxy: POST /api/generate<br/>(anonymized data)
     Proxy->>Proxy: Rate limit check
     Proxy->>Proxy: Validate request
-    Proxy->>Claude: Generate questions<br/>(with API key)
-    Claude-->>Proxy: AI response
+    Proxy->>OpenAI: Generate questions<br/>(with API key)
+    OpenAI-->>Proxy: AI response
     Proxy-->>SW: {questions, goalImpact, riskLevel}
     SW-->>CS: Display overlay
     
@@ -222,9 +222,9 @@ pausebuy/
 │
 ├── backend/                   # PROXY BACKEND (Vercel)
 │   ├── api/
-│   │   └── generate.ts        # Edge function for Claude API
+│   │   └── generate.ts        # Edge function for OpenAI API
 │   ├── lib/
-│   │   ├── claude.ts          # Claude API client
+│   │   ├── openai.ts          # OpenAI API client
 │   │   ├── opik.ts            # Opik tracing
 │   │   ├── rateLimit.ts       # Rate limiting logic
 │   │   └── validate.ts        # Request validation
@@ -377,7 +377,7 @@ export const SITE_CONFIGS: Record<string, SiteConfig> = {
 
 ## 5. Proxy API Architecture
 
-All LLM calls are routed through a secure proxy backend hosted on Vercel Edge Functions. This ensures the Anthropic API key is never exposed to clients.
+All LLM calls are routed through a secure proxy backend hosted on Vercel Edge Functions. This ensures the OpenAI API key is never exposed to clients.
 
 ### 5.1 Proxy Request Flow
 
@@ -402,14 +402,14 @@ flowchart TB
     end
     
     subgraph External["☁️ External APIs"]
-        Claude["🤖 Claude 3 Haiku"]
+        OpenAI["🤖 GPT-5 Mini"]
         Opik["📈 Comet Opik"]
     end
     
     SW -->|"HTTPS POST"| RL
-    API --> Claude
+    API --> OpenAI
     API --> Opik
-    Claude -->|Response| API
+    OpenAI -->|Response| API
     API -->|Questions| SW
 
     style Client fill:#e0f2fe,stroke:#0284c7
@@ -422,14 +422,14 @@ flowchart TB
 ```typescript
 // backend/api/generate.ts - Vercel Edge Function
 
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 import { Opik } from 'opik';
 import { rateLimit } from '../lib/rateLimit';
 import { validateRequest, ReflectionRequest } from '../lib/validate';
 
 // API key stored securely in Vercel environment variables
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY  // Never exposed to client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY  // Never exposed to client
 });
 
 const opik = new Opik({
@@ -476,11 +476,11 @@ export default async function handler(req: Request) {
   });
   
   try {
-    // 4. Call Claude API
+    // 4. Call OpenAI API
     const startTime = Date.now();
     
-    const response = await anthropic.messages.create({
-      model: 'claude-3-haiku-20240307',
+    const response = await openai.chat.completions.create({
+      model: 'gpt-5-mini',
       max_tokens: 300,
       temperature: 0.7,
       messages: [{
@@ -494,7 +494,7 @@ export default async function handler(req: Request) {
     // 5. Log to Opik
     opik.logLLMCall({
       traceId: trace.id,
-      model: 'claude-3-haiku-20240307',
+      model: 'gpt-5-mini',
       messages: [{ role: 'user', content: buildPrompt(request) }],
       completion: response.content[0].text,
       usage: {
@@ -750,7 +750,7 @@ flowchart TB
     Valid --> Call
     Call --> Log
     
-    subgraph Claude["🤖 Claude API"]
+    subgraph OpenAIAPI["🤖 OpenAI API"]
         Generate["Generate Questions"]
     end
     
@@ -813,7 +813,7 @@ flowchart TB
         end
         
         subgraph Span4["SPAN: llm_call ⭐"]
-            S4Info["model: claude-3-haiku<br/>input_tokens: 450<br/>output_tokens: 120<br/>duration: 800ms"]
+            S4Info["model: gpt-5-mini<br/>input_tokens: 450<br/>output_tokens: 120<br/>duration: 800ms"]
         end
         
         subgraph Span5["SPAN: user_interaction"]
@@ -873,15 +873,15 @@ export async function traceIntervention(
     const llmResult = await trace.span('llm_call', async (span) => {
       const startTime = Date.now();
       
-      const response = await anthropic.messages.create({
-        model: 'claude-3-haiku-20240307',
+      const response = await openai.chat.completions.create({
+        model: 'gpt-5-mini',
         max_tokens: 300,
         messages: [{ role: 'user', content: buildPrompt(context) }]
       });
       
       // Log LLM-specific data
       span.logLLMCall({
-        model: 'claude-3-haiku-20240307',
+        model: 'gpt-5-mini',
         inputTokens: response.usage.input_tokens,
         outputTokens: response.usage.output_tokens,
         latencyMs: Date.now() - startTime
@@ -909,7 +909,7 @@ export async function traceIntervention(
 
 | Metric | Measurement | Target | Implementation |
 |--------|-------------|--------|----------------|
-| **Question Relevance** | LLM-as-judge scoring (1-5) | Average > 4.0 | Async eval with Claude Sonnet |
+| **Question Relevance** | LLM-as-judge scoring (1-5) | Average > 4.0 | Async eval with GPT-4o |
 | **Prevention Rate** | % purchases prevented | > 30% | Client reports outcome to proxy |
 | **User Engagement** | % prompts answered vs dismissed | > 60% | Track overlay interactions |
 | **Latency P95** | End-to-end response time | < 2 seconds | Measured in proxy function |
@@ -965,7 +965,7 @@ flowchart LR
 |------------|---------|---------|
 | **Vercel Edge Functions** | Latest | Serverless API with global edge deployment |
 | **Vercel KV** | Latest | Redis-compatible store for rate limiting |
-| **@anthropic-ai/sdk** | 0.10+ | Official Claude API client |
+| **openai** | 4.77+ | Official OpenAI API client |
 | **Comet Opik** | Latest | LLM observability and evaluation |
 | **Zod** | 3.22+ | Request validation and schema enforcement |
 
@@ -1121,7 +1121,7 @@ flowchart TB
 ```bash
 # Vercel Environment Variables (set in dashboard, never in code)
 
-ANTHROPIC_API_KEY=sk-ant-...     # Claude API key
+OPENAI_API_KEY=sk-...            # OpenAI API key
 OPIK_API_KEY=...                 # Comet Opik API key  
 KV_REST_API_URL=...              # Vercel KV URL (auto-set)
 KV_REST_API_TOKEN=...            # Vercel KV token (auto-set)
@@ -1137,7 +1137,7 @@ ALLOWED_ORIGINS=chrome-extension://*  # CORS origins
 |---------|-----------|------------------------|
 | **Vercel Edge Functions** | 100K invocations/month | ~$20/month |
 | **Vercel KV** | 256MB storage | ~$5/month |
-| **Claude API (Haiku)** | N/A | ~$150/month (5 req/user/day) |
+| **OpenAI API (GPT-5 Mini)** | N/A | ~$100/month (5 req/user/day) |
 | **Comet Opik** | Free tier available | ~$0 (free tier sufficient) |
 
 **Total estimated cost at 10K users: ~$175/month**

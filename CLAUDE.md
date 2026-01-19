@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-PauseBuy is an AI-powered Chrome extension that helps users resist impulse purchases by introducing intelligent friction at checkout. It uses Claude API to generate contextual reflective questions when users are about to buy something.
+PauseBuy is an AI-powered Chrome extension that helps users resist impulse purchases by introducing intelligent friction at checkout. It uses OpenAI GPT-5 Mini API to generate contextual reflective questions when users are about to buy something.
 
 **Status:** Active development - extension scaffold complete
 
@@ -24,7 +24,7 @@ PauseBuy/
 │   └── tsconfig.json
 ├── backend/                # Vercel Edge Functions
 │   ├── api/
-│   │   └── generate.ts     # Claude API proxy endpoint
+│   │   └── generate.ts     # OpenAI GPT-5 Mini proxy endpoint
 │   ├── lib/
 │   │   └── validate.ts     # Zod request validation
 │   ├── package.json
@@ -79,7 +79,7 @@ pnpm deploy           # Deploy to Vercel
 | Language | TypeScript (strict mode) |
 | UI | React 18 + Tailwind CSS |
 | State | Zustand + Chrome Storage |
-| AI | Claude 3 Haiku via proxy |
+| AI | OpenAI GPT-5 Mini via proxy |
 | Backend | Vercel Edge Functions |
 | Validation | Zod schemas |
 | Observability | Comet Opik |

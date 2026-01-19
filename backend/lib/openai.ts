@@ -1,29 +1,29 @@
 /**
- * Claude API Client
+ * OpenAI API Client
  *
- * Handles communication with Anthropic's Claude API for generating
+ * Handles communication with OpenAI's GPT-5 Mini API for generating
  * personalized reflection questions.
  */
 
-import Anthropic from "@anthropic-ai/sdk"
+import OpenAI from "openai"
 
 import type { ReflectionRequest } from "./validate"
 
-// Initialize Anthropic client (uses ANTHROPIC_API_KEY env var)
-const anthropic = new Anthropic()
+// Initialize OpenAI client (uses OPENAI_API_KEY env var)
+const openai = new OpenAI()
 
-const MODEL = "claude-3-haiku-20240307"
+const MODEL = "gpt-5-mini"
 const MAX_TOKENS = 300
 const TEMPERATURE = 0.7
 const TIMEOUT_MS = 5000
 
-export interface ClaudeResponse {
+export interface LLMResponse {
   questions: string[]
   reasoning?: string
 }
 
 /**
- * Build the prompt for Claude based on user context
+ * Build the prompt based on user context
  */
 function buildPrompt(request: ReflectionRequest): string {
   const { product, context } = request
@@ -71,9 +71,9 @@ Respond with ONLY a JSON object in this exact format:
 }
 
 /**
- * Parse Claude's response into structured format
+ * Parse the LLM response into structured format
  */
-function parseResponse(content: string): ClaudeResponse {
+function parseResponse(content: string): LLMResponse {
   try {
     // Try to extract JSON from the response
     const jsonMatch = content.match(/\{[\s\S]*\}/)
@@ -86,7 +86,7 @@ function parseResponse(content: string): ClaudeResponse {
       }
     }
   } catch (e) {
-    console.error("[Claude] Failed to parse JSON response:", e)
+    console.error("[OpenAI] Failed to parse JSON response:", e)
   }
 
   // Fallback: try to extract questions from plain text
@@ -99,15 +99,15 @@ function parseResponse(content: string): ClaudeResponse {
     return { questions: lines.map((l) => l.replace(/^[\d\.\-\*]\s*/, "").trim()) }
   }
 
-  throw new Error("Could not parse Claude response")
+  throw new Error("Could not parse LLM response")
 }
 
 /**
- * Generate reflection questions using Claude API
+ * Generate reflection questions using OpenAI API
  */
 export async function generateReflectionQuestions(
   request: ReflectionRequest
-): Promise<ClaudeResponse> {
+): Promise<LLMResponse> {
   const prompt = buildPrompt(request)
 
   // Create abort controller for timeout
@@ -115,7 +115,7 @@ export async function generateReflectionQuestions(
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
   try {
-    const message = await anthropic.messages.create(
+    const completion = await openai.chat.completions.create(
       {
         model: MODEL,
         max_tokens: MAX_TOKENS,
@@ -135,23 +135,23 @@ export async function generateReflectionQuestions(
     clearTimeout(timeoutId)
 
     // Extract text content from response
-    const textContent = message.content.find((block) => block.type === "text")
-    if (!textContent || textContent.type !== "text") {
-      throw new Error("No text content in Claude response")
+    const content = completion.choices[0]?.message?.content
+    if (!content) {
+      throw new Error("No content in OpenAI response")
     }
 
-    return parseResponse(textContent.text)
+    return parseResponse(content)
   } catch (error) {
     clearTimeout(timeoutId)
 
     if (error instanceof Error) {
       if (error.name === "AbortError") {
-        throw new Error("Claude API timeout")
+        throw new Error("OpenAI API timeout")
       }
       throw error
     }
 
-    throw new Error("Unknown error calling Claude API")
+    throw new Error("Unknown error calling OpenAI API")
   }
 }
 
@@ -161,7 +161,7 @@ export async function generateReflectionQuestions(
 export async function generateWithRetry(
   request: ReflectionRequest,
   maxRetries: number = 1
-): Promise<ClaudeResponse> {
+): Promise<LLMResponse> {
   let lastError: Error | null = null
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -170,7 +170,7 @@ export async function generateWithRetry(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error))
       console.error(
-        `[Claude] Attempt ${attempt + 1} failed:`,
+        `[OpenAI] Attempt ${attempt + 1} failed:`,
         lastError.message
       )
 

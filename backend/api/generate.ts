@@ -1,8 +1,8 @@
 /**
  * PauseBuy Proxy API - Generate Reflection Questions
  *
- * This Edge Function proxies requests to Claude API, keeping the API key secure
- * on the server side. It handles CORS, request validation, and returns
+ * This Edge Function proxies requests to OpenAI GPT-5 Mini API, keeping the API key
+ * secure on the server side. It handles CORS, request validation, and returns
  * personalized reflection questions.
  *
  * POST /api/generate
@@ -12,7 +12,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-import { generateWithRetry } from "../lib/claude";
+import { generateWithRetry } from "../lib/openai";
 import { checkRateLimit, getClientId } from "../lib/ratelimit";
 import { validateRequest, type ReflectionRequest } from "../lib/validate";
 
@@ -151,8 +151,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // TODO: pb-oe1 - Log to Opik
 
     // Check if API key is configured
-    if (!process.env.ANTHROPIC_API_KEY) {
-      console.warn("[PauseBuy API] ANTHROPIC_API_KEY not set, using fallbacks");
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn("[PauseBuy API] OPENAI_API_KEY not set, using fallbacks");
       return res.status(200).json({
         questions: getRandomFallbackQuestions(
           request.context.frictionLevel >= 4 ? 3 : 2,
@@ -168,17 +168,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Call Claude API with retry
-    const claudeResponse = await generateWithRetry(request, 1);
+    // Call OpenAI GPT-5 Mini API with retry
+    const llmResponse = await generateWithRetry(request, 1);
 
     return res.status(200).json({
-      questions: claudeResponse.questions,
+      questions: llmResponse.questions,
       goalImpact,
       riskLevel,
       meta: {
         clientId,
         timestamp: new Date().toISOString(),
-        source: "claude",
+        source: "openai",
       },
     });
   } catch (error) {

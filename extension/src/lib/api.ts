@@ -54,7 +54,7 @@ export interface ReflectionResponse {
   meta?: {
     clientId: string
     timestamp: string
-    source: "claude" | "fallback"
+    source: "openai" | "fallback"
     error?: string
     reason?: string
   }
