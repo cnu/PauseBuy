@@ -8,7 +8,7 @@
 import OpenAI from "openai";
 import { trackOpenAI } from "opik-openai";
 
-import type { ReflectionRequest } from "./validate";
+import type { ReflectionRequest } from "./validate.js";
 
 // Lazy-initialized OpenAI client wrapped with Opik tracing
 let openaiClient: (OpenAI & { flush: () => Promise<void> }) | null = null;

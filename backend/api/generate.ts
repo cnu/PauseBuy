@@ -12,9 +12,9 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-import { flushTraces, generateWithRetry, getTimeOfDay } from "../lib/openai";
-import { checkRateLimit, getClientId } from "../lib/ratelimit";
-import { validateRequest, type ReflectionRequest } from "../lib/validate";
+import { flushTraces, generateWithRetry, getTimeOfDay } from "../lib/openai.js";
+import { checkRateLimit, getClientId } from "../lib/ratelimit.js";
+import { validateRequest, type ReflectionRequest } from "../lib/validate.js";
 
 // CORS headers for Chrome extension
 const CORS_HEADERS = {

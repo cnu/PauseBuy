@@ -10,7 +10,7 @@ import type { FinancialGoal } from "../store/types"
 import { calculateGoalImpact } from "./goalImpact"
 
 // Backend API URL - use environment variable in production
-const API_BASE_URL = process.env.PLASMO_PUBLIC_API_URL || "https://pausebuy-api.vercel.app"
+const API_BASE_URL = process.env.PLASMO_PUBLIC_API_URL || "https://pausebuy-cnus-projects.vercel.app"
 
 // Fallback questions when API is unavailable
 const FALLBACK_QUESTIONS = [

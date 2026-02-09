@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vercel dev",
     "dev:local": "tsx --env-file=.env.local server.ts",
-    "build": "vercel build",
+    "build": "tsc --noEmit",
     "deploy": "vercel deploy",
     "lint": "eslint api lib --ext .ts",
     "typecheck": "tsc --noEmit"
@@ -14,6 +14,7 @@
   "dependencies": {
     "@vercel/kv": "^3.0.0",
     "openai": "^4.77.0",
+    "opik": "^1.0.0",
     "opik-openai": "^1.0.0",
     "zod": "^3.24.0"
   },
