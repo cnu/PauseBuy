@@ -20,9 +20,9 @@ importers:
       openai:
         specifier: ^4.77.0
         version: 4.104.0(zod@3.25.76)
-      opik:
+      opik-openai:
         specifier: ^1.0.0
-        version: 1.9.87(chokidar@3.6.0)(zod@3.25.76)
+        version: 1.10.9(openai@4.104.0(zod@3.25.76))(opik@1.9.87(chokidar@3.6.0)(zod@3.25.76))
       zod:
         specifier: ^3.24.0
         version: 3.25.76
@@ -3899,6 +3899,13 @@ packages:
         optional: true
       zod:
         optional: true
+
+  opik-openai@1.10.9:
+    resolution: {integrity: sha512-wh0Gl3SAO8N1OHvS/dKKSrEfJs8mBnBypCp9JeZBAefwhnrYV0zje0GMpWCx9wm1N8GWeZG/cJenjXd5qXG0kw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      openai: ^6.0.1
+      opik: ^1.8.61
 
   opik@1.9.87:
     resolution: {integrity: sha512-8jkpFuPD3fQU6gP78HusE1ZdL7BEA0spzh6SpUHv2FEJI9ypJ5yqL/mB3aiuQv6EkumxXbaL+8jObpZNHoZROg==}
@@ -8891,6 +8898,11 @@ snapshots:
       zod: 3.25.76
     transitivePeerDependencies:
       - encoding
+
+  opik-openai@1.10.9(openai@4.104.0(zod@3.25.76))(opik@1.9.87(chokidar@3.6.0)(zod@3.25.76)):
+    dependencies:
+      openai: 4.104.0(zod@3.25.76)
+      opik: 1.9.87(chokidar@3.6.0)(zod@3.25.76)
 
   opik@1.9.87(chokidar@3.6.0)(zod@3.25.76):
     dependencies:

@@ -6,20 +6,34 @@
  */
 
 import OpenAI from "openai";
+import { trackOpenAI } from "opik-openai";
 
 import type { ReflectionRequest } from "./validate";
 
-// Lazy-initialized OpenAI client to allow startup without API key
-let openaiClient: OpenAI | null = null;
+// Lazy-initialized OpenAI client wrapped with Opik tracing
+let openaiClient: (OpenAI & { flush: () => Promise<void> }) | null = null;
 
-function getOpenAIClient(): OpenAI {
+function getOpenAIClient(): OpenAI & { flush: () => Promise<void> } {
   if (!openaiClient) {
     if (!process.env.OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY environment variable is not set");
     }
-    openaiClient = new OpenAI();
+    const client = new OpenAI();
+    openaiClient = trackOpenAI(client, {
+      traceMetadata: { tags: ["pausebuy"] },
+    });
   }
   return openaiClient;
+}
+
+/**
+ * Flush any pending Opik traces.
+ * Call after each request in serverless environments to ensure traces are sent.
+ */
+export async function flushTraces(): Promise<void> {
+  if (openaiClient) {
+    await openaiClient.flush();
+  }
 }
 
 const MODEL = "gpt-4o-mini";

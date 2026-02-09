@@ -14,6 +14,9 @@ import { callProxyAPI, isRateLimited } from "./lib/api"
 
 // Initialize default state on install
 chrome.runtime.onInstalled.addListener(async (details) => {
+  // Allow content scripts to access session storage (for suppression flag)
+  await chrome.storage.session.setAccessLevel({ accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS" })
+
   if (details.reason === "install") {
     // Set default values
     await chrome.storage.local.set({
@@ -76,6 +79,15 @@ export interface GetStatsMessage {
 
 // Handle messages from content scripts and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  // Forward overlay decisions back to the detector content script in the same tab
+  if (message.type === "PROCEED_WITH_PURCHASE" || message.type === "RESET_DETECTION") {
+    if (sender.tab?.id) {
+      chrome.tabs.sendMessage(sender.tab.id, message)
+    }
+    sendResponse({ received: true })
+    return true
+  }
+
   handleMessage(message, sender).then(async (response) => {
     // If purchase was blocked, send overlay message to the tab
     if (response?.blocked && sender.tab?.id) {

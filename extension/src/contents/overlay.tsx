@@ -116,6 +116,9 @@ function ReflectionOverlay() {
       reflectionTime
     })
 
+    // Tell detector to remove shields (user decided not to buy)
+    await chrome.runtime.sendMessage({ type: "RESET_DETECTION" })
+
     setVisible(false)
     setData(null)
   }
@@ -133,11 +136,16 @@ function ReflectionOverlay() {
       reflectionTime
     })
 
+    // Tell detector to re-click the original button
+    await chrome.runtime.sendMessage({ type: "PROCEED_WITH_PURCHASE" })
+
     setVisible(false)
     setData(null)
   }
 
   const handleDismiss = () => {
+    // Reset detection so user can trigger overlay again if they click the button
+    chrome.runtime.sendMessage({ type: "RESET_DETECTION" })
     setVisible(false)
     setData(null)
   }

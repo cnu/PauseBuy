@@ -15,7 +15,7 @@ export const ProductSchema = z.object({
 
 export const ContextSchema = z.object({
   localDateTime: z.string().datetime(), // ISO 8601 datetime from client
-  goalName: z.string().max(100).nullable(),
+  goalName: z.string().max(100).nullish(),
   recentPurchaseCount: z.number().int().min(0).max(100),
   frictionLevel: z.number().int().min(1).max(5),
 });

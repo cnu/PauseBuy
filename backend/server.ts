@@ -6,7 +6,7 @@
  */
 
 import { createServer, IncomingMessage, ServerResponse } from "http";
-import { generateWithRetry, getTimeOfDay } from "./lib/openai";
+import { flushTraces, generateWithRetry, getTimeOfDay } from "./lib/openai";
 import { validateRequest, type ReflectionRequest } from "./lib/validate";
 
 const PORT = process.env.PORT || 3001;
@@ -166,6 +166,8 @@ async function handleGenerate(req: IncomingMessage, res: ServerResponse) {
         error: error instanceof Error ? error.message : "Unknown error",
       },
     });
+  } finally {
+    await flushTraces();
   }
 }
 

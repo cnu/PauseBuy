@@ -12,7 +12,7 @@
 
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
-import { generateWithRetry, getTimeOfDay } from "../lib/openai";
+import { flushTraces, generateWithRetry, getTimeOfDay } from "../lib/openai";
 import { checkRateLimit, getClientId } from "../lib/ratelimit";
 import { validateRequest, type ReflectionRequest } from "../lib/validate";
 
@@ -149,8 +149,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const goalImpact = calculateGoalImpact(request);
 
   try {
-    // TODO: pb-oe1 - Log to Opik
-
     // Check if API key is configured
     if (!process.env.OPENAI_API_KEY) {
       console.warn("[PauseBuy API] OPENAI_API_KEY not set, using fallbacks");
@@ -169,7 +167,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       });
     }
 
-    // Call OpenAI GPT-5 Mini API with retry
+    // Call OpenAI GPT-4o-mini API with retry
     const llmResponse = await generateWithRetry(request, 1);
 
     return res.status(200).json({
@@ -199,5 +197,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         error: error instanceof Error ? error.message : "Unknown error",
       },
     });
+  } finally {
+    await flushTraces();
   }
 }
